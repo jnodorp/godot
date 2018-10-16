@@ -1,0 +1,23 @@
+language: go
+
+sudo: false
+
+go: 1.x
+
+script:
+- diff -u <(echo -n) <(gofmt -d .)
+- go vet $(go list ./... | grep -v /vendor/)
+- go test -v -race ./...
+- env GOOS=darwin GOARCH=amd64 go build -o godot.darwin.amd64
+- env GOOS=linux GOARCH=amd64 go build -o godot.linux.amd64
+
+deploy:
+  provider: releases
+  api_key:
+    secure: XnxVLjRao4owkQSYSYjRWLiq4V/H3EZGddzTm4YZHG/R9O7Jz7zUyg8z8FZrAujSB0aaR+SVxUAVV7S4Lh+4IX7i8xI6dEFwA1bDOjyOHxMiW++mgcNSaruy2+ULqvHGOId6f98zJXWwIlKxxHWDzDIKKnhAw6mSQTpjK4IrKFxgxPzb2T/gKyOgXDhAZqP5K5kPmLGfB6SEJEkgvw3huXGvqbYkQFWjE5QG3hP9iCQ5MGTE5ComXbFTJ5kMW7/awMVjMD0diEWXdjKP/QNbJHqhu+JDNyYnlxpok9erhKm6o3GWmBTWnR8yfv5nTd9h4+VRBQCu61Ud7nSjmN+jtGr0n5wy/K3Qj82Pdow1lPc+oUFMEAF0fgghW4HZGWDkp72kRhbSZNubyRFIj0eFLOgABfSJoTJv4aNqXeW7G5jS3KqaQQ0epPt+yzPEPIy/vMwBEljMOSP3uD7ub4v2dAv957jayQ1NTWG5NQR4mDN7SnqDmgRz7oJJXllcW0XuykH3z9Bosfs6xZB4GQtEO5PCU16OD9qRUanAwAMlrFZJMqLUqpdNNXCTmSvDeY5C3EUQLpw8gA07iDhDfcPpPhLl+j5GYoDJK8CO/kU7agEMPXC9ltGnfww1ISdvQrswa/csCzXr+WsAQAyoA35Z2XlM2EUdZqequIh8h2ueMcQ=
+  file:
+    - godot.darwin.amd64
+    - godot.linux.amd64
+  on:
+    repo: jschlichtholz/godot
+    tags: true
