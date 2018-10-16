@@ -19,6 +19,11 @@ var RootCmd = &cobra.Command{
 	Short: "A dotfile manager written in Go",
 	Long:  `Godot is a dotfile manager written in Go.`,
 	Run: func(cmd *cobra.Command, args []string) {
+		location := viper.GetString("location")
+		if location == "" {
+			log.Fatal("Property 'location' not set.")
+		}
+
 		// Expand tilde in the configured location.
 		dir, err := homedir.Expand(viper.GetString("location"))
 		if err != nil {
@@ -86,7 +91,8 @@ func initConfig() {
 		viper.SetConfigName(".godot")
 	}
 
-	// Automatically read configuration from environment variables.
+	// Automatically read configuration from environment variables named 'GODOT_*'.
+	viper.SetEnvPrefix("godot")
 	viper.AutomaticEnv()
 
 	// If a config file is found, read it in.
