@@ -2,13 +2,15 @@ package cmd
 
 import (
 	"fmt"
-	"github.com/mitchellh/go-homedir"
-	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 	"io/ioutil"
 	"log"
 	"os"
+	"path"
 	"strings"
+
+	"github.com/mitchellh/go-homedir"
+	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 var cfgFile string
@@ -58,6 +60,7 @@ var RootCmd = &cobra.Command{
 	},
 }
 
+// Execute the root command
 func Execute() {
 	if err := RootCmd.Execute(); err != nil {
 		fmt.Println(err)
@@ -70,7 +73,7 @@ func init() {
 	cobra.OnInitialize(initConfig)
 
 	// Setup configuration flags.
-	RootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.godot.yaml)")
+	RootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.godot/godot.yaml)")
 }
 
 // initConfig reads in config file and ENV variables if set.
@@ -86,9 +89,9 @@ func initConfig() {
 			os.Exit(1)
 		}
 
-		// Search config in home directory with name ".godot" (without extension).
-		viper.AddConfigPath(home)
-		viper.SetConfigName(".godot")
+		// Search config directory in home directory with name ".godot" (without extension).
+		viper.AddConfigPath(path.Join(home, ".godot"))
+		viper.SetConfigName("godot")
 	}
 
 	// Automatically read configuration from environment variables named 'GODOT_*'.
