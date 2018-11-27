@@ -13,15 +13,15 @@ if [ ! -x "$(command -v curl)" ]; then
 fi
 
 # Create configuration directory if required.
-CONFIGURATION_DIRECTORY="$HOME/.$NAME"
-if [ ! -d "$CONFIGURATION_DIRECTORY" ]; then
-  mkdir "$CONFIGURATION_DIRECTORY"
+CONFIG_DIR="$HOME/.$NAME"
+if [ ! -d "$CONFIG_DIR" ]; then
+  mkdir "$CONFIG_DIR"
 fi
 
 # Create binary directory if required.
-BINARY_DIRECTORY="$CONFIGURATION_DIRECTORY/bin"
-if [ ! -d "$BINARY_DIRECTORY" ];then
-  mkdir "$BINARY_DIRECTORY"
+BINARY_DIR="$CONFIG_DIR/bin"
+if [ ! -d "$BINARY_DIR" ];then
+  mkdir "$BINARY_DIR"
 fi
 
 # Determine the latest release.
@@ -29,16 +29,16 @@ release=`curl --silent "https://api.github.com/repos/$ORG/$NAME/releases/latest"
 echo "Latest relase is $release"
 
 # Create release directory if required.
-RELEASE_DIRECTORY="$BINARY_DIRECTORY/$release"
-if [ ! -d "$RELEASE_DIRECTORY" ]; then
-  mkdir "$RELEASE_DIRECTORY"
+RELEASE_DIR="$BINARY_DIR/$release"
+if [ ! -d "$RELEASE_DIR" ]; then
+  mkdir "$RELEASE_DIR"
 fi
 
 # Determine the OS (and convert to lowercase).
 os=`uname -s | tr '[A-Z]' '[a-z]'`
 
 # Download latest release if required.
-BINARY="$RELEASE_DIRECTORY/$NAME"
+BINARY="$RELEASE_DIR/$NAME"
 if [ ! -f "$BINARY" ]; then
   echo "Downloading godot $release for $os..."
   curl --silent -L https://github.com/$ORG/$NAME/releases/download/$release/$NAME.$os.amd64 -o $BINARY
