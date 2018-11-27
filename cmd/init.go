@@ -1,14 +1,14 @@
 package cmd
 
 import (
-	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
 	"os/exec"
 	"path"
 
-	homedir "github.com/mitchellh/go-homedir"
+	"github.com/spf13/viper"
+
 	"github.com/spf13/cobra"
 )
 
@@ -18,59 +18,83 @@ var initCmd = &cobra.Command{
 	Short: "Initialize godot from a dotfile repository",
 	Long: `The init command initializes godot from a given
 dotfile repository. The repository should contain a godot.yaml
-file with configuration and multiple tmpl files.`,
+file together with all other required files.`,
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		// Create a temporary directory to clone the repository.
+		cfgDir := expand("~/.godot")
+		cfgFileName := "godot.yaml"
+		cfgFile := path.Join(cfgDir, cfgFileName)
+
+		// Check if godot is already initialized.
+		if _, err := os.Stat(cfgDir); !os.IsNotExist(err) {
+			// TODO: This could be handled gracefully by ask the user for permission to overwrite.
+			log.Fatalf("godot is already initailized (%s exists)", cfgDir)
+		}
+
+		// Create a tmp dir to clone the repo.
 		tmpDir, err := ioutil.TempDir("", "godot")
 		if err != nil {
-			log.Fatal("Could not create temporary directory.")
+			log.Fatalf("creating temporary directory failed: %s", err)
+		}
+		defer func() {
+			log.Printf("removing %s", tmpDir)
+			if err = os.RemoveAll(tmpDir); err != nil {
+				log.Printf("removing temporary directory failed: %s", err)
+			}
+		}()
+
+		// Clone the git repo (provided as arg) to a tmp dir.
+		log.Printf("cloning %s to %s", args[0], tmpDir)
+		git, err := exec.Command("git", "clone", args[0], tmpDir).CombinedOutput()
+		if err != nil {
+			log.Fatalf("cloning repository failed: %s", git)
 		}
 
-		// Clone the git repository provided in the argument to a temporary directory.
-		log.Printf("Cloning %s to %s...", args[0], tmpDir)
-		git := exec.Command("git", "clone", args[0], tmpDir)
-		git.Run()
-
-		// Build context.
-		ctx := NewContext()
-
-		// Find home directory.
-		home, err := homedir.Dir()
-		if err != nil {
-			fmt.Println(err)
-			os.Exit(1)
+		// Utilize the config from the repo cloned to the tmp dir.
+		viper.AddConfigPath(tmpDir)
+		if err := viper.ReadInConfig(); err != nil {
+			log.Fatalf("reading 'godot.yaml' from the repository failed: %s", err)
 		}
 
-		// Create $HOME/.godot directory.
-		os.Mkdir(path.Join(home, ".godot"), 0755)
-
-		// Process the godot configuration template.
-		log.Printf("Processing the godot configuration template.")
-		err = processTemplateTo(tmpDir, "godot.tmpl", path.Join(home, ".godot", "godot.yaml"), *ctx)
-		if err != nil {
-			log.Printf("Error processing the godot configuration template: %s", err)
+		// Read and expand the location property.
+		location := viper.GetString("location")
+		if location == "" {
+			log.Fatal("property 'location' not set")
 		} else {
-			log.Printf("Successfully processed the godot configuration template.")
+			location = expand(location)
 		}
+
+		// Check if location path exists.
+		if _, err := os.Stat(location); !os.IsNotExist(err) {
+			// TODO: This could be handled gracefully by ask the user for permission to overwrite.
+			log.Fatalf("location %s already exists", location)
+		}
+
+		// Copy the tmp dir to the location.
+		log.Printf("copying %s to %s", tmpDir, location)
+		cp, err := exec.Command("cp", "-R", tmpDir, location).CombinedOutput()
+		if err != nil {
+			log.Fatalf("failed to copy repository to location: %s", cp)
+		}
+
+		// Create config dir.
+		log.Printf("creating configuration directory %s", cfgDir)
+		if err := os.Mkdir(cfgDir, 0755); err != nil {
+			log.Fatalf("creating confiuration directory failed: %s", err)
+		}
+
+		// Copy the config file to the config dir.
+		cfgSrc := path.Join(tmpDir, cfgFileName)
+		log.Printf("copying %s to %s", cfgSrc, cfgFile)
+		cpCfg, err := exec.Command("cp", cfgSrc, cfgFile).CombinedOutput()
+		if err != nil {
+			log.Fatalf("copying the configuration file to %s failed: %s", cfgDir, cpCfg)
+		}
+
+		log.Print("successfully initialized godot")
 	},
 }
 
 func init() {
 	RootCmd.AddCommand(initCmd)
-}
-
-func checkErr(err error) {
-	if err != nil {
-		log.Fatal(err)
-	}
-}
-
-func copy(src string, dst string) {
-	// Read all content of src to data
-	data, err := ioutil.ReadFile(src)
-	checkErr(err)
-	// Write data to dst
-	err = ioutil.WriteFile(dst, data, 0644)
-	checkErr(err)
 }
