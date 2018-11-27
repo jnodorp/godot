@@ -4,5 +4,5 @@
 
 Build with `go build`.
 
-Use `source <(curl -s https://raw.githubusercontent.com/jschlichtholz/godot/develop/godotw.sh) init https://github.com/jschlichtholz/.dotfiles` to initialize
+Use `source <(curl -s https://raw.githubusercontent.com/jschlichtholz/godot/develop/godotw.sh) init git@github.com:jschlichtholz/.dotfiles.git` to initialize
 on any system.
