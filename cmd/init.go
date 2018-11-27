@@ -77,10 +77,12 @@ file together with all other required files.`,
 			log.Fatalf("failed to copy repository to location: %s", cp)
 		}
 
-		// Create config dir.
-		log.Printf("creating configuration directory %s", cfgDir)
-		if err := os.Mkdir(cfgDir, 0755); err != nil {
-			log.Fatalf("creating confiuration directory failed: %s", err)
+		// Create config dir if it does not exist yet.
+		if _, err := os.Stat(cfgDir); os.IsNotExist(err) {
+			log.Printf("creating configuration directory %s", cfgDir)
+			if err := os.Mkdir(cfgDir, 0755); err != nil {
+				log.Fatalf("creating confiuration directory failed: %s", err)
+			}
 		}
 
 		// Copy the config file to the config dir.
