@@ -44,4 +44,6 @@ if [ ! -f "$BINARY" ]; then
   curl --silent -L https://github.com/$ORG/$NAME/releases/download/$release/$NAME.$os.amd64 -o $BINARY
 fi
 
+# Make binary executable and run it.
+chmod +x $BINARY
 $BINARY "$@"

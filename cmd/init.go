@@ -26,9 +26,9 @@ file together with all other required files.`,
 		cfgFile := path.Join(cfgDir, cfgFileName)
 
 		// Check if godot is already initialized.
-		if _, err := os.Stat(cfgDir); !os.IsNotExist(err) {
+		if _, err := os.Stat(cfgFile); !os.IsNotExist(err) {
 			// TODO: This could be handled gracefully by ask the user for permission to overwrite.
-			log.Fatalf("godot is already initailized (%s exists)", cfgDir)
+			log.Fatalf("godot is already initailized (%s exists)", cfgFile)
 		}
 
 		// Create a tmp dir to clone the repo.
