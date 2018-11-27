@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.com/jschlichtholz/godot.svg?branch=master)](https://travis-ci.com/jschlichtholz/godot)
+
 # godot
 
 Build with `go build`.
