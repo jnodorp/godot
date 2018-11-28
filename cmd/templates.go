@@ -24,6 +24,12 @@ func templates(ctx Context) {
 	// Get template targets.
 	targets := viper.GetStringMapString("templates.targets")
 
+	// Create a temporary directory to write the templates.
+	tmpDir, err := ioutil.TempDir("", "godot")
+	if err != nil {
+		log.Fatal("Could not create temporary directory.")
+	}
+
 	// Process all templates.
 	for src, target := range targets {
 		log.Printf("Processing template '%s'.", src)
@@ -36,7 +42,7 @@ func templates(ctx Context) {
 		}
 
 		// Process the template.
-		err := processTemplate(location, src, target, ctx)
+		err := processTemplate(location, src, target, tmpDir, ctx)
 		if err != nil {
 			log.Printf("Error processing template '%s': %s", src, err)
 		} else {
@@ -45,17 +51,11 @@ func templates(ctx Context) {
 	}
 }
 
-func processTemplate(dir, src, target string, ctx Context) error {
+func processTemplate(dir, src, target, tmpDir string, ctx Context) error {
 	// Parse the template file.
 	tmpl, err := template.New(src).ParseFiles(path.Join(dir, src))
 	if err != nil {
 		return err
-	}
-
-	// Create a temporary directory to write the templates.
-	tmpDir, err := ioutil.TempDir("", "godot")
-	if err != nil {
-		log.Fatal("Could not create temporary directory.")
 	}
 
 	// Create the temporary target file.
@@ -74,15 +74,17 @@ func processTemplate(dir, src, target string, ctx Context) error {
 	// Check if target file already exists.
 	if _, err := os.Stat(target); !os.IsNotExist(err) {
 		// Show diff if diff is installed. If diff is empty: skip confirmation.
-		diff, err := exec.Command("diff", tmp, target).Output()
-		if err == nil {
+		diff, err := exec.Command("diff", tmp, target).CombinedOutput()
+		if err != nil {
 			log.Printf("%s", diff)
 		}
 
-		if len(diff) == 0 && !userConfirm(fmt.Sprintf("'%s' already exists. Overwrite?", target), true) {
+		if len(diff) != 0 && !userConfirm(fmt.Sprintf("'%s' already exists. Overwrite?", target), true) {
 			return fmt.Errorf("'%s' changed but already exists", target)
 		}
 	}
+
+	copyFile(tmp, target)
 
 	return nil
 }
