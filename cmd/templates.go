@@ -12,7 +12,7 @@ import (
 	"github.com/spf13/viper"
 )
 
-func templates() {
+func templates(ctx Context) {
 	// Read and expand the location property.
 	location := viper.GetString("location")
 	if location == "" {
@@ -23,9 +23,6 @@ func templates() {
 
 	// Get template targets.
 	targets := viper.GetStringMapString("templates.targets")
-
-	// Build context.
-	ctx := NewContext()
 
 	// Process all templates.
 	for src, target := range targets {
@@ -39,7 +36,7 @@ func templates() {
 		}
 
 		// Process the template.
-		err := processTemplate(location, src, target, *ctx)
+		err := processTemplate(location, src, target, ctx)
 		if err != nil {
 			log.Printf("Error processing template '%s': %s", src, err)
 		} else {
