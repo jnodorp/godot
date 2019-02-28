@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
@@ -27,8 +28,9 @@ file together with all other required files.`,
 
 		// Check if godot is already initialized.
 		if _, err := os.Stat(cfgFile); !os.IsNotExist(err) {
-			// TODO: This could be handled gracefully by ask the user for permission to overwrite.
-			log.Fatalf("godot is already initailized (%s exists)", cfgFile)
+			if !userConfirm(fmt.Sprintf("godot is already initailized (%s exists). Continue?", cfgFile), false) {
+				os.Exit(0)
+			}
 		}
 
 		// Create a tmp dir to clone the repo.
@@ -37,7 +39,6 @@ file together with all other required files.`,
 			log.Fatalf("creating temporary directory failed: %s", err)
 		}
 		defer func() {
-			log.Printf("removing %s", tmpDir)
 			if err = os.RemoveAll(tmpDir); err != nil {
 				log.Printf("removing temporary directory failed: %s", err)
 			}
@@ -66,8 +67,15 @@ file together with all other required files.`,
 
 		// Check if location path exists.
 		if _, err := os.Stat(location); !os.IsNotExist(err) {
-			// TODO: This could be handled gracefully by ask the user for permission to overwrite.
-			log.Fatalf("location %s already exists", location)
+			if !userConfirm(fmt.Sprintf("location %s already exists. Remove?", location), false) {
+				os.Exit(0)
+			}
+
+			// Remove existing directory.
+			err := os.RemoveAll(location)
+			if err != nil {
+				log.Fatalf("failed to remove %s", location)
+			}
 		}
 
 		// Copy the tmp dir to the location.
@@ -80,7 +88,7 @@ file together with all other required files.`,
 		// Create config dir if it does not exist yet.
 		if _, err := os.Stat(cfgDir); os.IsNotExist(err) {
 			log.Printf("creating configuration directory %s", cfgDir)
-			if err := os.Mkdir(cfgDir, 0755); err != nil {
+			if err := os.Mkdir(cfgDir, os.ModeDir); err != nil {
 				log.Fatalf("creating confiuration directory failed: %s", err)
 			}
 		}
@@ -88,12 +96,12 @@ file together with all other required files.`,
 		// Copy the config file to the config dir.
 		cfgSrc := path.Join(tmpDir, cfgFileName)
 		log.Printf("copying %s to %s", cfgSrc, cfgFile)
-		cpCfg, err := exec.Command("cp", cfgSrc, cfgFile).CombinedOutput()
+		err = copyFile(cfgSrc, cfgFile)
 		if err != nil {
-			log.Fatalf("copying the configuration file to %s failed: %s", cfgDir, cpCfg)
+			log.Fatalf("copying the configuration file to %s failed: %s", cfgDir, err)
 		}
 
-		log.Print("successfully initialized godot")
+		fmt.Println("successfully initialized godot")
 	},
 }
 

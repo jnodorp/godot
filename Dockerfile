@@ -1,6 +1,21 @@
-FROM busybox
+FROM golang:1.12 as builder
+LABEL maintainer="Julian Schlichtholz <julian.schlichtholz@gmail.com>"
 
-LABEL maintainer="julian.schlichtholz@gmail.com"
+ENV CGO_ENABLED=0
+ENV GOARCH=amd64
+ENV GOOS=linux
 
-COPY ./godot /godot
-CMD ["/godot"]
+# Copy the sources.
+RUN mkdir /app
+WORKDIR /app
+COPY . .
+
+# Build godot.
+RUN go build
+
+FROM scratch
+LABEL maintainer="Julian Schlichtholz <julian.schlichtholz@gmail.com>"
+
+COPY --from=builder /app/godot /usr/bin/godot
+
+ENTRYPOINT ["/usr/bin/jibe"]

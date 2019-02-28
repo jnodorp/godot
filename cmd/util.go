@@ -3,7 +3,7 @@ package cmd
 import (
 	"bufio"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"os"
 	"strings"
@@ -59,22 +59,29 @@ func homeDir() string {
 }
 
 // copy a file preserving its mode.
-func copyFile(src string, dst string) {
+func copyFile(src, dst string) error {
 	// Determine file mode.
 	info, err := os.Stat(src)
 	if err != nil {
-		log.Printf("Error while getting file mode of %s: %s", src, err)
+		return err
 	}
 
-	// Read all content of src to data.
-	data, err := ioutil.ReadFile(src)
+	in, err := os.Open(src)
 	if err != nil {
-		log.Printf("Error reading %s: %s", src, err)
+		return err
 	}
 
-	// Write data to dst.
-	err = ioutil.WriteFile(dst, data, info.Mode())
+	out, err := os.OpenFile(dst, os.O_RDWR|os.O_CREATE|os.O_TRUNC, info.Mode())
 	if err != nil {
-		log.Printf("Error writing %s: %s", dst, err)
+		in.Close()
+		return err
 	}
+	defer out.Close()
+	_, err = io.Copy(out, in)
+	in.Close()
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

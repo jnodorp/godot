@@ -19,7 +19,10 @@ var RootCmd = &cobra.Command{
 	Short: "A dotfile manager written in Go",
 	Long:  `Godot is a dotfile manager written in Go.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		templates()
+		// Build context.
+		ctx := NewContext()
+
+		templates(*ctx)
 	},
 }
 
