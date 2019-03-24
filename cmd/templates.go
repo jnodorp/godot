@@ -9,6 +9,7 @@ import (
 	"os/exec"
 	"path"
 
+	"github.com/otiai10/copy"
 	"github.com/spf13/viper"
 )
 
@@ -84,7 +85,7 @@ func processTemplate(dir, src, target, tmpDir string, ctx Context) error {
 		}
 	}
 
-	copyFile(tmp, target)
+	copy.Copy(tmp, target)
 
 	return nil
 }

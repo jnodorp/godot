@@ -17,5 +17,6 @@ FROM scratch
 LABEL maintainer="Julian Schlichtholz <julian.schlichtholz@gmail.com>"
 
 COPY --from=builder /app/godot /usr/bin/godot
+COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
 
-ENTRYPOINT ["/usr/bin/jibe"]
+ENTRYPOINT ["/usr/bin/godot"]

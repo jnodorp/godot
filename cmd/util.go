@@ -3,7 +3,6 @@ package cmd
 import (
 	"bufio"
 	"fmt"
-	"io"
 	"log"
 	"os"
 	"strings"
@@ -56,32 +55,4 @@ func homeDir() string {
 	}
 
 	return dir
-}
-
-// copy a file preserving its mode.
-func copyFile(src, dst string) error {
-	// Determine file mode.
-	info, err := os.Stat(src)
-	if err != nil {
-		return err
-	}
-
-	in, err := os.Open(src)
-	if err != nil {
-		return err
-	}
-
-	out, err := os.OpenFile(dst, os.O_RDWR|os.O_CREATE|os.O_TRUNC, info.Mode())
-	if err != nil {
-		in.Close()
-		return err
-	}
-	defer out.Close()
-	_, err = io.Copy(out, in)
-	in.Close()
-	if err != nil {
-		return err
-	}
-
-	return nil
 }
