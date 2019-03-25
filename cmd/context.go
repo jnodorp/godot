@@ -1,12 +1,12 @@
 package cmd
 
 import (
-	"log"
 	"os"
 	"regexp"
 	"runtime"
 	"strings"
 
+	log "github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 )
 
@@ -41,7 +41,7 @@ func (c Context) Header(msg ...string) string {
 func (c Context) Hostname() string {
 	hostname, err := os.Hostname()
 	if err != nil {
-		log.Printf("Could not determine hostname.")
+		log.WithError(err).Warn("could not determine hostname")
 	}
 
 	return hostname
@@ -94,7 +94,7 @@ func profiles() []string {
 
 		if match {
 			result = append(result, profile)
-			log.Printf("Profile '%s' applied.\n", profile)
+			log.WithField("profile", profile).Info("applied profile")
 		}
 	}
 
@@ -109,11 +109,11 @@ func matchOs(profile string) bool {
 
 	match, err := regexp.MatchString(regex, runtime.GOOS)
 	if err != nil {
-		log.Fatalf("Matching OS failed: %s", err)
+		log.WithError(err).Fatal("matching OS failed")
 	}
 
 	if !match {
-		log.Printf("Profile '%s' is not applicable: OS '%s' does not match '%s'.", profile, runtime.GOOS, regex)
+		log.WithField("profile", profile).Infof("OS '%s' does not match '%s'", runtime.GOOS, regex)
 	}
 
 	return match
@@ -127,18 +127,17 @@ func matchHostname(profile string) bool {
 
 	hostname, err := os.Hostname()
 	if err != nil {
-		log.Printf("Could not determine hostname. Skipping hostname matching.\n")
+		log.WithError(err).Warn("skipping hostname matching because hostname could not be determined")
 		return true
 	}
 
 	match, err := regexp.MatchString(regex, hostname)
 	if err != nil {
-		log.Fatalf("Matching hostname failed: %s", err)
+		log.WithError(err).Fatal("matching hostname failed")
 	}
 
 	if !match {
-		log.Printf("Profile '%s' is not applicable: Hostname '%s' does not match '%s'.", profile, hostname,
-			regex)
+		log.WithField("profile", profile).Infof("Hostname '%s' does not match '%s'", hostname, regex)
 	}
 
 	return match
