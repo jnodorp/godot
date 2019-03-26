@@ -3,14 +3,16 @@ package cmd
 import (
 	"fmt"
 	"io/ioutil"
-	"log"
 	"os"
-	"os/exec"
 	"path"
 
-	"github.com/spf13/viper"
-
+	"github.com/otiai10/copy"
+	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
+	"gopkg.in/src-d/go-git.v4"
+	"gopkg.in/src-d/go-git.v4/plumbing/transport"
+	"gopkg.in/src-d/go-git.v4/plumbing/transport/http"
 )
 
 // initCmd represents the init command
@@ -33,28 +35,51 @@ file together with all other required files.`,
 			}
 		}
 
+		// Create the OS tmp dir if it does not exist.
+		if _, err := os.Stat(os.TempDir()); os.IsNotExist(err) {
+			err := os.MkdirAll(os.TempDir(), os.ModeDir)
+			if err != nil {
+				log.WithError(err).Fatalf("failed to create missing OS temporary directory %s", os.TempDir())
+			}
+		}
+
 		// Create a tmp dir to clone the repo.
 		tmpDir, err := ioutil.TempDir("", "godot")
 		if err != nil {
-			log.Fatalf("creating temporary directory failed: %s", err)
+			log.WithError(err).Fatal("creating temporary directory failed")
 		}
 		defer func() {
 			if err = os.RemoveAll(tmpDir); err != nil {
-				log.Printf("removing temporary directory failed: %s", err)
+				log.WithError(err).Error("removing temporary directory failed")
 			}
 		}()
 
+		// TODO: Support private key auth.
+		var gitAuth transport.AuthMethod
+		if viper.GetString("username") != "" || viper.GetString("password") != "" {
+			gitAuth = &http.BasicAuth{
+				Username: viper.GetString("username"),
+				Password: viper.GetString("password"),
+			}
+		} else {
+			gitAuth = nil
+		}
+
 		// Clone the git repo (provided as arg) to a tmp dir.
-		log.Printf("cloning %s to %s", args[0], tmpDir)
-		git, err := exec.Command("git", "clone", args[0], tmpDir).CombinedOutput()
+		log.Infof("cloning %s to %s", args[0], tmpDir)
+		_, err = git.PlainClone(tmpDir, false, &git.CloneOptions{
+			URL:      args[0],
+			Auth:     gitAuth,
+			Progress: os.Stdout,
+		})
 		if err != nil {
-			log.Fatalf("cloning repository failed: %s", git)
+			log.WithError(err).Fatal("cloning repository failed")
 		}
 
 		// Utilize the config from the repo cloned to the tmp dir.
 		viper.AddConfigPath(tmpDir)
 		if err := viper.ReadInConfig(); err != nil {
-			log.Fatalf("reading 'godot.yaml' from the repository failed: %s", err)
+			log.WithError(err).Fatal("reading 'godot.yaml' from the repository failed")
 		}
 
 		// Read and expand the location property.
@@ -74,37 +99,44 @@ file together with all other required files.`,
 			// Remove existing directory.
 			err := os.RemoveAll(location)
 			if err != nil {
-				log.Fatalf("failed to remove %s", location)
+				log.WithError(err).Fatalf("failed to remove %s", location)
 			}
 		}
 
 		// Copy the tmp dir to the location.
 		log.Printf("copying %s to %s", tmpDir, location)
-		cp, err := exec.Command("cp", "-R", tmpDir, location).CombinedOutput()
+		err = copy.Copy(tmpDir, location)
 		if err != nil {
-			log.Fatalf("failed to copy repository to location: %s", cp)
+			log.WithError(err).Fatalf("failed to copy repository to location")
 		}
 
 		// Create config dir if it does not exist yet.
 		if _, err := os.Stat(cfgDir); os.IsNotExist(err) {
-			log.Printf("creating configuration directory %s", cfgDir)
+			log.Infof("creating configuration directory %s", cfgDir)
 			if err := os.Mkdir(cfgDir, os.ModeDir); err != nil {
-				log.Fatalf("creating confiuration directory failed: %s", err)
+				log.WithError(err).Fatal("creating confiuration directory failed")
 			}
 		}
 
 		// Copy the config file to the config dir.
 		cfgSrc := path.Join(tmpDir, cfgFileName)
-		log.Printf("copying %s to %s", cfgSrc, cfgFile)
-		err = copyFile(cfgSrc, cfgFile)
+		log.Infof("copying %s to %s", cfgSrc, cfgFile)
+		err = copy.Copy(cfgSrc, cfgFile)
 		if err != nil {
-			log.Fatalf("copying the configuration file to %s failed: %s", cfgDir, err)
+			log.WithError(err).Fatalf("copying the configuration file to %s failed", cfgDir)
 		}
 
-		fmt.Println("successfully initialized godot")
+		log.Info("successfully initialized godot")
 	},
 }
 
 func init() {
 	RootCmd.AddCommand(initCmd)
+
+	// Setup configuration flags.
+	initCmd.Flags().StringP("username", "u", "", "the git username to use")
+	viper.BindPFlag("username", initCmd.Flags().Lookup("username"))
+
+	initCmd.Flags().StringP("password", "p", "", "the git password to use")
+	viper.BindPFlag("password", initCmd.Flags().Lookup("password"))
 }

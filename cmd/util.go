@@ -3,12 +3,11 @@ package cmd
 import (
 	"bufio"
 	"fmt"
-	"io"
-	"log"
 	"os"
 	"strings"
 
 	homedir "github.com/mitchellh/go-homedir"
+	log "github.com/sirupsen/logrus"
 )
 
 // askForConfirmation asks the user for confirmation. A user must type in "yes" or "no" and then press enter. It has
@@ -25,7 +24,7 @@ func userConfirm(s string, fallback bool) bool {
 
 	response, err := reader.ReadString('\n')
 	if err != nil {
-		log.Fatal(err)
+		log.WithError(err).Fatal()
 	}
 
 	response = strings.ToLower(strings.TrimSpace(response))
@@ -43,7 +42,7 @@ func userConfirm(s string, fallback bool) bool {
 func expand(s string) string {
 	dir, err := homedir.Expand(s)
 	if err != nil {
-		log.Fatal("failed to expanding users home directory", err)
+		log.WithError(err).Fatal("failed to expanding users home directory")
 	}
 
 	return dir
@@ -52,36 +51,8 @@ func expand(s string) string {
 func homeDir() string {
 	dir, err := homedir.Dir()
 	if err != nil {
-		log.Fatal("failed to determine users home directory", err)
+		log.WithError(err).Fatal("failed to determine users home directory")
 	}
 
 	return dir
-}
-
-// copy a file preserving its mode.
-func copyFile(src, dst string) error {
-	// Determine file mode.
-	info, err := os.Stat(src)
-	if err != nil {
-		return err
-	}
-
-	in, err := os.Open(src)
-	if err != nil {
-		return err
-	}
-
-	out, err := os.OpenFile(dst, os.O_RDWR|os.O_CREATE|os.O_TRUNC, info.Mode())
-	if err != nil {
-		in.Close()
-		return err
-	}
-	defer out.Close()
-	_, err = io.Copy(out, in)
-	in.Close()
-	if err != nil {
-		return err
-	}
-
-	return nil
 }

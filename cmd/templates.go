@@ -4,11 +4,12 @@ import (
 	"fmt"
 	"html/template"
 	"io/ioutil"
-	"log"
 	"os"
 	"os/exec"
 	"path"
 
+	"github.com/otiai10/copy"
+	log "github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 )
 
@@ -27,12 +28,12 @@ func templates(ctx Context) {
 	// Create a temporary directory to write the templates.
 	tmpDir, err := ioutil.TempDir("", "godot")
 	if err != nil {
-		log.Fatal("Could not create temporary directory.")
+		log.WithError(err).Fatal("could not create temporary directory")
 	}
 
 	// Process all templates.
 	for src, target := range targets {
-		log.Printf("Processing template '%s'.", src)
+		log.WithField("template", src).Info("processing template")
 
 		// Fallback to default target (~/.{{ template }}).
 		if target == "" {
@@ -44,9 +45,9 @@ func templates(ctx Context) {
 		// Process the template.
 		err := processTemplate(location, src, target, tmpDir, ctx)
 		if err != nil {
-			log.Printf("Error processing template '%s': %s", src, err)
+			log.WithField("template", src).WithError(err).Error("processing template failed")
 		} else {
-			log.Printf("Successfully processed template '%s'.", src)
+			log.WithField("template", src).Info("processing template succeeded")
 		}
 	}
 }
@@ -84,7 +85,7 @@ func processTemplate(dir, src, target, tmpDir string, ctx Context) error {
 		}
 	}
 
-	copyFile(tmp, target)
+	copy.Copy(tmp, target)
 
 	return nil
 }
